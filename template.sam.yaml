@@ -6,6 +6,7 @@ Resources:
   FunctionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: "VpcLambdaFlowLogRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -53,6 +54,54 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
     
+  FlowLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "VpcFlowLogRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+              -
+                Effect: "Allow"
+                Principal:
+                  Service:
+                    - "vpc-flow-logs.amazonaws.com" 
+                  Action: 
+                    - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "write_flow_log"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  CloudWatchCreateVpcRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.ec2
+        detail-type:
+          - 'AWS API Call via CloudTrail'
+        detail:
+          eventSource:
+            - ec2.amazonaws.com"
+          eventName:
+            - CreateVpc
+      Targets:
+        - Arn: 
+          Id: automatic-flow-logs-vpc
+
   Function:
     Type: AWS::Serverless::Function
     Properties:
@@ -62,4 +111,9 @@ Resources:
       Timeout: 20
       Handler: enable_flow_logs.lambda_handler
       Runtime: python3.6
+      Environment:
+        Variables:
+          FLOWLOGS_GROUP_NAME: "SampleFlowGroup"
+          ROLE_ARN: !GetAtt FlowLogsRole.Arn
     
+        
