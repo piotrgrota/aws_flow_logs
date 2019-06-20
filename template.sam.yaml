@@ -99,8 +99,16 @@ Resources:
           eventName:
             - CreateVpc
       Targets:
-        - Arn: 
+        - Arn: !Sub ${Function.Arn}
           Id: automatic-flow-logs-vpc
+
+  LambdaSchedulePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub ${Function.Arn}
+      Principal: 'events.amazonaws.com'
+      SourceArn: !Sub ${CloudWatchCreateVpcRule.Arn}
 
   Function:
     Type: AWS::Serverless::Function
